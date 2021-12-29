@@ -38,7 +38,7 @@ function initListUsersRequestHandler(sequelizeClient: SequelizeClient): RequestH
 
       const users = await models.users.findAll({
         attributes: isAdmin ? ['id', 'name', 'email'] : ['name', 'email'],
-        ...!isAdmin && { where: { type: { [Op.ne]: UserType.ADMIN } } },
+        ...(isAdmin ? {} : { where: { type: { [Op.ne]: UserType.ADMIN } } }),
         raw: true,
       });
 
@@ -135,6 +135,7 @@ async function createUser(data: CreateUserData, sequelizeClient: SequelizeClient
     }
   }
 
+  // TODO: create passwordHash
   await models.users.create({ type, name, email, passwordHash: password });
 }
 

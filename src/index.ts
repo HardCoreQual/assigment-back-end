@@ -4,7 +4,7 @@ import { initSequelizeClient } from './sequelize';
 import { initUsersRouter } from './routers';
 import { initErrorRequestHandler, initNotFoundRequestHandler } from './middleware';
 
-const PORT = 8080;
+const PORT = 3002;
 
 async function main(): Promise<void> {
   const app = express();
