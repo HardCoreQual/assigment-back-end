@@ -1,11 +1,12 @@
 import {RequestHandler, Router} from 'express';
 import {Op} from 'sequelize';
+import { hash } from 'bcrypt';
 
 import type {SequelizeClient} from '../sequelize';
 import type {User} from '../repositories/types';
 
 import {BadRequestError, UnauthorizedError} from '../errors';
-import {generateToken, hashPassword} from '../security';
+import {generateToken, passwordCoincideWithHash} from '../security';
 import {initAdminValidationRequestHandler, initTokenValidationRequestHandler, RequestAuth} from '../middleware/security';
 import {UserType} from '../constants';
 
@@ -91,7 +92,7 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
         throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
       }
 
-      if (user.passwordHash !== hashPassword(password)) {
+      if (await passwordCoincideWithHash(password, user.passwordHash)) {
         throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
       }
 
@@ -164,8 +165,9 @@ async function createUser(data: CreateUserData, sequelizeClient: SequelizeClient
     }
   }
 
-  // TODO: create passwordHash
-  await models.users.create({ type, name, email, passwordHash: password });
+  const passwordHash = await hash(password, 10);
+
+  await models.users.create({ type, name, email, passwordHash });
 }
 
 type CreateUserData = Pick<User, 'type' | 'name' | 'email'> & { password: User['passwordHash'] };
