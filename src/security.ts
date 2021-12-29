@@ -1,4 +1,4 @@
-import { NotImplementedError } from "./errors";
+import { NotImplementedError } from './errors';
 
 // TODO(roman): implement these
 // external libraries can be used
