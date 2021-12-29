@@ -1,9 +1,6 @@
-import { NotImplementedError } from './errors';
-import { compare } from 'bcrypt';
+import {compare} from 'bcrypt';
+import jwt, {VerifyErrors} from 'jsonwebtoken';
 
-// TODO(roman): implement these
-// external libraries can be used
-// you can even ignore them and use your own preferred method
 
 export function passwordCoincideWithHash(password: string, hashPassword: string) {
   return new Promise(r => {
@@ -14,16 +11,34 @@ export function passwordCoincideWithHash(password: string, hashPassword: string)
 }
 
 export function generateToken(data: TokenData): string {
-  throw new NotImplementedError('TOKEN_GENERATION_NOT_IMPLEMENTED_YET');
+  return jwt.sign(data, <never>process.env.TOKEN_SECRET, { expiresIn: '1800s' });
 }
 
-export function isValidToken(token: string): boolean {
-  throw new NotImplementedError('TOKEN_VALIDATION_NOT_IMPLEMENTED_YET');
+const readToken = <T>(token: string): Promise<{ error: VerifyErrors | null, data: T | null }> => {
+  return new Promise((r) => {
+    jwt.verify(token, <never>process.env.TOKEN_SECRET, (err, data) => {
+      r({
+        data: (data as T) || null,
+        error: err,
+      });
+    });
+  });
+};
+
+export async function isValidToken(token: string): Promise<boolean> {
+  const { error } = await readToken<TokenData>(token);
+  return !error;
 }
 
-// NOTE(roman): assuming that `isValidToken` will be called before
-export function extraDataFromToken(token: string): TokenData {
-  throw new NotImplementedError('TOKEN_EXTRACTION_NOT_IMPLEMENTED_YET');
+export async function extraDataFromToken(token: string): Promise<TokenData> {
+  const { data, error } = await readToken<TokenData>(token);
+
+  // IMPLEMENT: NOTE(roman): assuming that `isValidToken` will be called before
+  if (!data || error) {
+    throw new Error('Try extract data from not valid token');
+  }
+
+  return data;
 }
 
 export interface TokenData {

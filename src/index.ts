@@ -1,23 +1,21 @@
+import dotenv from 'dotenv';
 import express from 'express';
-
 import { initSequelizeClient } from './sequelize';
 import { initUsersRouter } from './routers';
 import { initErrorRequestHandler, initNotFoundRequestHandler } from './middleware';
 
-const PORT = 3002;
+dotenv.config();
 
 async function main(): Promise<void> {
   const app = express();
 
-  // TODO(roman): store these credentials in some external configs
-  // so that they don't end up in the git repo
   const sequelizeClient = await initSequelizeClient({
-    dialect: 'postgres',
-    host: 'localhost',
-    port: 5432,
-    username: 'postgres',
-    password: 'postgres',
-    database: 'bend-backend-task',
+    dialect: <never>process.env.DATABASE_DIALECT,
+    host: <never>process.env.DATABASE_HOST,
+    port: <never>process.env.DATABASE_PORT,
+    username: <never>process.env.DATABASE_USERNAME,
+    password: <never>process.env.DATABASE_PASSWORD,
+    database: <never>process.env.DATABASE_NAME,
   });
 
   app.use(express.json());
@@ -29,6 +27,7 @@ async function main(): Promise<void> {
   app.use(initErrorRequestHandler());
 
   return new Promise((resolve) => {
+    const PORT = <string>process.env.SERVER_PORT;
     app.listen(PORT, () => {
       console.info(`app listening on port: '${PORT}'`);
 
