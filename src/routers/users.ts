@@ -1,6 +1,6 @@
 import {RequestHandler, Router} from 'express';
 import {Op} from 'sequelize';
-import { hash } from 'bcrypt';
+import {hash} from 'bcrypt';
 
 import type {SequelizeClient} from '../sequelize';
 import type {User} from '../repositories/types';

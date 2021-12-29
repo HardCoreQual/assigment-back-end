@@ -1,7 +1,7 @@
-import { Sequelize, DataTypes } from 'sequelize';
+import {DataTypes, Sequelize} from 'sequelize';
 
-import { UserType } from '../constants/users';
-import { User } from '../repositories/users';
+import {UserType} from '../constants/users';
+import {User} from '../repositories/users';
 
 export function setupUsersModel(modelName: string, sequelize: Sequelize): void {
   User.init({
