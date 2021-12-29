@@ -9,7 +9,7 @@
     "compile": "shx rm -rf dist && tsc -p tsconfig.json",
     "start:slow": "npm run compile && npm start",
     "test": "jest",
-    "lint": "npm run eslint --fix ./"
+    "lint": "eslint --fix ./"
   },
   "keywords": [],
   "author": "",

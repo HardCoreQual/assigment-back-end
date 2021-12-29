@@ -1,13 +1,13 @@
-import { Router, RequestHandler } from 'express';
-import { Op } from 'sequelize';
+import {RequestHandler, Router} from 'express';
+import {Op} from 'sequelize';
 
-import type { SequelizeClient } from '../sequelize';
-import type { User } from '../repositories/types';
+import type {SequelizeClient} from '../sequelize';
+import type {User} from '../repositories/types';
 
-import { BadRequestError, UnauthorizedError } from '../errors';
-import { hashPassword, generateToken } from '../security';
-import { initTokenValidationRequestHandler, initAdminValidationRequestHandler, RequestAuth } from '../middleware/security';
-import { UserType } from '../constants';
+import {BadRequestError, UnauthorizedError} from '../errors';
+import {generateToken, hashPassword} from '../security';
+import {initAdminValidationRequestHandler, initTokenValidationRequestHandler, RequestAuth} from '../middleware/security';
+import {UserType} from '../constants';
 
 export function initUsersRouter(sequelizeClient: SequelizeClient): Router {
   const router = Router({ mergeParams: true });
@@ -53,10 +53,18 @@ function initListUsersRequestHandler(sequelizeClient: SequelizeClient): RequestH
 
 function initCreateUserRequestHandler(sequelizeClient: SequelizeClient): RequestHandler {
   return async function createUserRequestHandler(req, res, next): Promise<void> {
-    try {
-      // NOTE(roman): missing validation and cleaning
-      const { type, name, email, password } = req.body as CreateUserData;
+    const { type, name, email, password } = req.body as CreateUserData;
 
+    if (checkUserRegisterParams({name, email, password})) {
+      next(new BadRequestError('INVALID_PARAMS'));
+      return;
+    }
+    if (!Object.values(UserType).includes(type)) {
+      next(new BadRequestError('Unknown UserType'));
+      return;
+    }
+
+    try {
       await createUser({ type, name, email, password }, sequelizeClient);
 
       return res.status(204).end();
@@ -96,12 +104,33 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
   };
 }
 
+type UserRegisterParams = Omit<CreateUserData, 'type'>;
+
+const notNullKeys = (data: Record<string, unknown>, keys: string[]) => {
+  return Object
+    .keys(data)
+    .filter(key => !keys.includes(key))
+    .length === 0;
+};
+
+const regexEmail = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i;
+
+const checkUserRegisterParams = (params: UserRegisterParams) => {
+  return notNullKeys(params, ['email', 'password', 'name'])
+    && params.email.match(regexEmail)
+    && params.password.length > 9;
+};
+
+
 function initRegisterUserRequestHandler(sequelizeClient: SequelizeClient): RequestHandler {
   return async function createUserRequestHandler(req, res, next): Promise<void> {
-    try {
-      // NOTE(roman): missing validation and cleaning
-      const { name, email, password } = req.body as Omit<CreateUserData, 'type'>;
+    const { name, email, password } = req.body as UserRegisterParams;
+    if (!checkUserRegisterParams({name, email, password})) {
+      next(new BadRequestError('INVALID_PARAMS'));
+      return;
+    }
 
+    try {
       await createUser({ type: UserType.BLOGGER, name, email, password }, sequelizeClient);
 
       return res.status(204).end();
