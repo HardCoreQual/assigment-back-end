@@ -54,19 +54,19 @@ function initListUsersRequestHandler(sequelizeClient: SequelizeClient): RequestH
 
 function initCreateUserRequestHandler(sequelizeClient: SequelizeClient): RequestHandler {
   return async function createUserRequestHandler(req, res, next): Promise<void> {
-    const { type, name, email, password } = req.body as CreateUserData;
+    const {type, ...data} = req.body as Partial<CreateUserData>;
 
-    if (checkUserRegisterParams({name, email, password})) {
+    if (!checkUserRegisterParams(data)) {
       next(new BadRequestError('INVALID_PARAMS'));
       return;
     }
-    if (!Object.values(UserType).includes(type)) {
+    if (!type || !Object.values(UserType).includes(type)) {
       next(new BadRequestError('Unknown UserType'));
       return;
     }
 
     try {
-      await createUser({ type, name, email, password }, sequelizeClient);
+      await createUser({ type, ...data }, sequelizeClient);
 
       return res.status(204).end();
     } catch (error) {
@@ -80,8 +80,11 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
     const { models } = sequelizeClient;
 
     try {
-      // NOTE(roman): missing validation and cleaning
-      const { email, password } = req.body as { name: string; email: string; password: string };
+      const params = req.body as Partial<UserLoginParmas>;
+      if (!checkUserLoginParams(params)) {
+        throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
+      }
+      const { email, password } = params;
 
       const user = await models.users.findOne({
         attributes: ['id', 'passwordHash'],
@@ -106,6 +109,7 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
 }
 
 type UserRegisterParams = Omit<CreateUserData, 'type'>;
+type UserLoginParmas = Omit<UserRegisterParams, 'name'>;
 
 const notNullKeys = (data: Record<string, unknown>, keys: string[]) => {
   return Object
@@ -116,23 +120,25 @@ const notNullKeys = (data: Record<string, unknown>, keys: string[]) => {
 
 const regexEmail = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i;
 
-const checkUserRegisterParams = (params: UserRegisterParams) => {
-  return notNullKeys(params, ['email', 'password', 'name'])
-    && params.email.match(regexEmail)
-    && params.password.length > 9;
+const checkUserLoginParams = (params: Partial<UserLoginParmas>): params is UserLoginParmas => {
+  return Boolean(params.email?.match(regexEmail) && params.password && params.password.length > 9);
+};
+
+const checkUserRegisterParams = (params: Partial<UserRegisterParams>): params is UserRegisterParams => {
+  return notNullKeys(params, ['email', 'password', 'name']) && checkUserLoginParams(params);
 };
 
 
 function initRegisterUserRequestHandler(sequelizeClient: SequelizeClient): RequestHandler {
   return async function createUserRequestHandler(req, res, next): Promise<void> {
-    const { name, email, password } = req.body as UserRegisterParams;
-    if (!checkUserRegisterParams({name, email, password})) {
+    const data = req.body as Partial<UserRegisterParams>;
+    if (!checkUserRegisterParams(data)) {
       next(new BadRequestError('INVALID_PARAMS'));
       return;
     }
 
     try {
-      await createUser({ type: UserType.BLOGGER, name, email, password }, sequelizeClient);
+      await createUser({ type: UserType.BLOGGER, ...data }, sequelizeClient);
 
       return res.status(204).end();
     } catch (error) {
