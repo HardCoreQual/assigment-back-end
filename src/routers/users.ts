@@ -21,9 +21,9 @@ export function initUsersRouter(sequelizeClient: SequelizeClient): Router {
     .post(tokenValidation, adminValidation, initCreateUserRequestHandler(sequelizeClient));
 
   router.route('/login')
-    .post(tokenValidation, initLoginUserRequestHandler(sequelizeClient));
+    .post(initLoginUserRequestHandler(sequelizeClient));
   router.route('/register')
-    .post(initRegisterUserRequestHandler(sequelizeClient));
+    .post(initRegisterUserRequestHandler(sequelizeClient), initLoginUserRequestHandler(sequelizeClient));
 
   return router;
 }
@@ -67,8 +67,7 @@ function initCreateUserRequestHandler(sequelizeClient: SequelizeClient): Request
 
     try {
       await createUser({ type, ...data }, sequelizeClient);
-
-      return res.status(204).end();
+      return res.send(204).end();
     } catch (error) {
       next(error);
     }
@@ -80,10 +79,11 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
     const { models } = sequelizeClient;
 
     try {
-      const params = req.body as Partial<UserLoginParmas>;
+      const params = req.body as Partial<UserLoginParams>;
       if (!checkUserLoginParams(params)) {
         throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
       }
+
       const { email, password } = params;
 
       const user = await models.users.findOne({
@@ -95,7 +95,7 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
         throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
       }
 
-      if (await passwordCoincideWithHash(password, user.passwordHash)) {
+      if (!await passwordCoincideWithHash(password, user.passwordHash)) {
         throw new UnauthorizedError('EMAIL_OR_PASSWORD_INCORRECT');
       }
 
@@ -109,7 +109,7 @@ function initLoginUserRequestHandler(sequelizeClient: SequelizeClient): RequestH
 }
 
 type UserRegisterParams = Omit<CreateUserData, 'type'>;
-type UserLoginParmas = Omit<UserRegisterParams, 'name'>;
+type UserLoginParams = Omit<UserRegisterParams, 'name'>;
 
 const notNullKeys = (data: Record<string, unknown>, keys: string[]) => {
   return Object
@@ -120,7 +120,7 @@ const notNullKeys = (data: Record<string, unknown>, keys: string[]) => {
 
 const regexEmail = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i;
 
-const checkUserLoginParams = (params: Partial<UserLoginParmas>): params is UserLoginParmas => {
+const checkUserLoginParams = (params: Partial<UserLoginParams>): params is UserLoginParams => {
   return Boolean(params.email?.match(regexEmail) && params.password && params.password.length > 9);
 };
 
@@ -140,7 +140,7 @@ function initRegisterUserRequestHandler(sequelizeClient: SequelizeClient): Reque
     try {
       await createUser({ type: UserType.BLOGGER, ...data }, sequelizeClient);
 
-      return res.status(204).end();
+      next();
     } catch (error) {
       next(error);
     }

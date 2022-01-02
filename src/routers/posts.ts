@@ -64,6 +64,7 @@ const initCreatePostRequestHandler = (sequelizeClient: SequelizeClient) : Reques
 
       res.json(posts).end();
     } catch (e) {
+      console.log( e );
       next(new HttpError('INTERNAL_ERROR'));
     }
   };
