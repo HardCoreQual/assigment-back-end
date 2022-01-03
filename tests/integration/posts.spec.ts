@@ -14,7 +14,9 @@ const postHost = host + '/api/v1/posts';
 // TODO: admin can remove any show post
 // TODO: admin don't can remove any hidden post
 // TODO: simple blogger not have access to edit|remove posts what don't belong to him
-// TODO: admin don't can edit any post
+// TODO: admin & users don't can edit any post, only belong to him
+// TODO: not auth user not make operations with posts
+// TODO: auth with wrong or expired token not make operations with posts
 
 
 describe('full api posts', () => {

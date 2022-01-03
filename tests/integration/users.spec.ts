@@ -1,11 +1,15 @@
-import axios, {AxiosError, AxiosRequestConfig} from 'axios';
+import axios, {AxiosError} from 'axios';
 import {nanoid} from 'nanoid';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 
 const host = 'http://localhost:' + process.env.SERVER_PORT;
 const userHost = host + '/api/v1/users';
+
+// TODO: not possible login with not matched password
+// TODO: not possible register with invalid name, email, password
 
 it('failed login to unregistered user', async () => {
   const name = nanoid();
