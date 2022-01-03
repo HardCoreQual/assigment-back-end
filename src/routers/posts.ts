@@ -42,27 +42,33 @@ const initListPostsRequestHandler = (sequelizeClient: SequelizeClient) : Request
   };
 };
 
+export type PostType = {
+  id: string,
+  title: string,
+  content: string,
+  isHidden: boolean,
+}
 
 const initCreatePostRequestHandler = (sequelizeClient: SequelizeClient) : RequestHandler => {
   return async (req, res, next) => {
     const { auth: { user: { id: userId } } } = req as unknown as { auth: RequestAuth };
     const { models } = sequelizeClient;
 
-    const { content, title, isHidden } = req.body as { title?: string, content?: string, isHidden ?: boolean };
+    const { content, title, isHidden } = req.body as Partial<Omit<PostType, 'id'>>;
     if (!title) {
       next(new BadRequestError('EMPTY_POST_TITLE'));
       return;
     }
 
     try {
-      const posts = await models.posts.create({
+      const post = await models.posts.create({
         title: title,
         content: content || '',
         isHidden: isHidden !== undefined ? isHidden : true,
         authorId: userId,
       });
 
-      res.json(posts).end();
+      res.json(post).end();
     } catch (e) {
       console.log( e );
       next(new HttpError('INTERNAL_ERROR'));
@@ -75,14 +81,14 @@ const initEditPostRequestHandler = (sequelizeClient: SequelizeClient) : RequestH
     const { auth: { user: { id: userId } } } = req as unknown as { auth: RequestAuth };
     const { models } = sequelizeClient;
 
-    const { content, title, isHidden, id } = req.body as { id?: string, title?: string, content?: string, isHidden ?: boolean };
+    const { content, title, isHidden, id } = req.body as Partial<PostType>;
     if (!id) {
       next(new BadRequestError('MISSING_POST_ID'));
       return;
     }
 
     try {
-      const posts = await models.posts.update({
+      const [countEdited] = await models.posts.update({
         title: title,
         content: content,
         isHidden: isHidden,
@@ -93,7 +99,7 @@ const initEditPostRequestHandler = (sequelizeClient: SequelizeClient) : RequestH
         },
       });
 
-      res.json(posts).end();
+      res.json(countEdited).end();
     } catch (e) {
       next(new HttpError('INTERNAL_ERROR'));
     }
@@ -115,7 +121,7 @@ const initDeletePostRequestHandler = (sequelizeClient: SequelizeClient) : Reques
     const isAdmin = type === UserType.ADMIN;
 
     try {
-      const posts = await models.posts.destroy({
+      const postsCount = await models.posts.destroy({
         where: {
           id: id,
           [Op.or]: [
@@ -125,7 +131,7 @@ const initDeletePostRequestHandler = (sequelizeClient: SequelizeClient) : Reques
         },
       });
 
-      res.json(posts).end();
+      res.json(postsCount).end();
     } catch (e) {
       next(new HttpError('INTERNAL_ERROR'));
     }
